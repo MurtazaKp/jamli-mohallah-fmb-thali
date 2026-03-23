@@ -8,81 +8,130 @@ export default function Home() {
   const [its, setIts] = useState("");
   const [user, setUser] = useState<UserProps | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const handleSearch = async () => {
+    if (isUpdating) return;
+
     setLoading(true);
-    const res = await fetch("/api/search", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ its }),
-    });
+    try {
+      const res = await fetch("/api/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ its }),
+      });
 
-    if (!res.ok) {
-      toast.error("User Not Found");
-      setUser(null);
+      if (!res.ok) {
+        toast.error("User Not Found");
+        setUser(null);
+        return;
+      }
+
+      const data = await res.json();
+      setUser(data);
+    } catch (err) {
+      toast.error("Something went wrong");
+    } finally {
       setLoading(false);
-      return;
-    }
-
-    const data = await res.json();
-    setUser(data);
-    setLoading(false);
-  };
-
-  const handleUpdate = async (type: "start" | "stop") => {
-    const res = await fetch("/api/submit", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        type,
-        area: user?.area,
-        rowIndex: user?.rowIndex,
-      }),
-    });
-
-    if (res.ok) {
-      toast.success(
-        `Thali successfully ${type === "start" ? "started" : "stopped"}!`,
-      );
-      handleSearch();
     }
   };
+
+  const handleUpdate = async () => {
+    if (!user || isUpdating) return;
+
+    const type = user.status === "ACTIVE" ? "stop" : "start";
+
+    setIsUpdating(true);
+
+    try {
+      const res = await fetch("/api/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type,
+          area: user.area,
+          its: user.its,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        // Refresh user status
+        const refreshRes = await fetch("/api/search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ its }),
+        });
+
+        if (refreshRes.ok) {
+          const refreshedData = await refreshRes.json();
+          setUser(refreshedData);
+        }
+
+        toast.success(
+          `Thali successfully ${type === "start" ? "started" : "stopped"}!`,
+        );
+      } else {
+        toast.error(data.error || "Something went wrong");
+      }
+    } catch (err) {
+      toast.error("Something went wrong");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const isActive = user?.status === "ACTIVE";
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center py-12 px-4">
-      <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8">
-        <h1 className="text-2xl font-bold text-center text-emerald-800 mb-6">
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center p-4 sm:py-12">
+      {/* Page Lock Wrapper */}
+      <div
+        className={`w-full max-w-md bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8 transition ${
+          isUpdating ? "pointer-events-none opacity-80" : ""
+        }`}
+      >
+        <h1 className="text-xl sm:text-2xl font-bold text-center text-emerald-800 mb-6">
           FMB Thali System
         </h1>
 
         {/* Search Section */}
-        <div className="flex gap-2 mb-8">
+        <div className="flex flex-col sm:flex-row gap-3 mb-8">
           <input
-            type="text"
+            type="number"
+            pattern="[0-9]*"
+            inputMode="numeric"
             placeholder="Enter ITS Number"
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none text-black"
+            className="flex-1 px-4 py-3 border border-gray-200 rounded-xl 
+            focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 
+            outline-none text-black text-base 
+            disabled:bg-gray-100 disabled:cursor-not-allowed disabled:pointer-events-none"
             value={its}
             onChange={(e) => setIts(e.target.value)}
+            disabled={loading || isUpdating}
           />
+
           <button
             onClick={handleSearch}
-            disabled={loading}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
+            disabled={loading || isUpdating || !its}
+            className="bg-emerald-600 active:scale-95 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-semibold transition-all 
+            disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none disabled:active:scale-100"
           >
-            {loading ? "..." : "Search"}
+            {loading ? "Searching" : "Search"}
           </button>
         </div>
 
         {/* User Card */}
         {user ? (
-          <div className="border-t pt-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <div className="flex justify-between items-start mb-4">
-              <h3 className="text-lg font-semibold text-gray-800">
-                User Details
-              </h3>
+          <div className="animate-in fade-in zoom-in-95 duration-300">
+            <div className="flex justify-between items-center mb-6 bg-gray-50 p-3 rounded-lg">
+              <span className="text-sm font-medium text-gray-500">
+                Current Status
+              </span>
               <span
                 className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
-                  user.status === "ACTIVE"
+                  isActive
                     ? "bg-green-100 text-green-700"
                     : "bg-red-100 text-red-700"
                 }`}
@@ -91,45 +140,63 @@ export default function Home() {
               </span>
             </div>
 
-            <div className="space-y-3 text-gray-600 mb-8">
-              <div className="flex justify-between">
-                <span className="font-medium text-gray-400">Name</span>
-                <span className="text-gray-900">{user.name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-medium text-gray-400">Phone</span>
-                <span className="text-gray-900">{user.phone}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-medium text-gray-400">Area</span>
-                <span className="text-gray-900">{user.area}</span>
-              </div>
+            <div className="space-y-4 mb-8">
+              {[
+                { label: "Name", value: user.name },
+                { label: "Phone", value: user.phone },
+                { label: "Area", value: user.area },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  className="flex justify-between border-b border-gray-50 pb-2"
+                >
+                  <span className="text-sm text-gray-400">{item.label}</span>
+                  <span className="text-sm font-medium text-gray-900 text-right ml-4">
+                    {item.value}
+                  </span>
+                </div>
+              ))}
             </div>
 
-            {/* Action Buttons */}
-            <div className="grid grid-cols-2 gap-4">
-              <button
-                disabled={user.status === "ACTIVE"}
-                onClick={() => handleUpdate("start")}
-                className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-semibold transition-all disabled:hidden"
-              >
-                Start Thali
-              </button>
-              <button
-                disabled={user.status === "STOPPED"}
-                onClick={() => handleUpdate("stop")}
-                className="w-full bg-red-500 hover:bg-red-600 text-white py-3 rounded-lg font-semibold transition-all disabled:hidden"
-              >
-                Stop Thali
-              </button>
-            </div>
+            <button
+              onClick={handleUpdate}
+              disabled={isUpdating}
+              className={`w-full py-4 rounded-xl font-bold text-white shadow-md transition-all 
+              active:scale-[0.98] 
+              disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none ${
+                isActive
+                  ? "bg-red-500 hover:bg-red-600"
+                  : "bg-emerald-600 hover:bg-emerald-700"
+              }`}
+            >
+              {isUpdating
+                ? "Processing..."
+                : isActive
+                  ? "Stop Thali"
+                  : "Start Thali"}
+            </button>
           </div>
         ) : (
-          <p className="text-center text-gray-400 italic">
-            Enter Its Number to View Your Details
-          </p>
+          <div className="text-center">
+            <p className="text-gray-500 text-sm">
+              Enter your ITS number to manage your thali status
+            </p>
+          </div>
         )}
       </div>
+
+      {/* Footer with Portfolio */}
+      <p className="mt-4 text-xs text-gray-400 text-center mt-auto">
+        Developed by{" "}
+        <a
+          href="https://murtaza-dev.vercel.app/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline hover:text-emerald-600"
+        >
+          Murtaza Khopoliwala
+        </a>
+      </p>
     </div>
   );
 }

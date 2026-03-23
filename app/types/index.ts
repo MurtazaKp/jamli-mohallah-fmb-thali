@@ -4,5 +4,5 @@ export type UserProps = {
   phone: string;
   status: string;
   area: string;
-  rowIndex: number;
+
 };
