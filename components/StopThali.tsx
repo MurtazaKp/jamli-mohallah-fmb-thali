@@ -85,7 +85,7 @@ export default function Home() {
   const isActive = user?.status === "ACTIVE";
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center p-4 sm:py-12">
+    <div className="min-h-dvh bg-gray-50 flex flex-col items-center p-4 sm:py-12">
       {/* Page Lock Wrapper */}
       <div
         className={`w-full max-w-md bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8 transition ${
