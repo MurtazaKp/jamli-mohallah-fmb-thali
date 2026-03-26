@@ -39,7 +39,7 @@ export default function Home() {
   const handleUpdate = async () => {
     if (!user || isUpdating) return;
 
-    const type = user.status === "ACTIVE" ? "stop" : "start";
+    const type = !user.status ? "stop" : "start";
 
     setIsUpdating(true);
 
@@ -57,7 +57,6 @@ export default function Home() {
       const data = await res.json();
 
       if (res.ok) {
-        // Refresh user status
         const refreshRes = await fetch("/api/search", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -82,11 +81,10 @@ export default function Home() {
     }
   };
 
-  const isActive = user?.status === "ACTIVE";
+  const isActive = !user?.status;
 
   return (
     <div className="min-h-dvh bg-gray-50 flex flex-col items-center p-4 sm:py-12">
-      {/* Page Lock Wrapper */}
       <div
         className={`w-full max-w-md bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8 transition ${
           isUpdating ? "pointer-events-none opacity-80" : ""
@@ -116,9 +114,16 @@ export default function Home() {
             onClick={handleSearch}
             disabled={loading || isUpdating || !its}
             className="bg-emerald-600 active:scale-95 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-semibold transition-all 
-            disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none disabled:active:scale-100"
+            disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none disabled:active:scale-100 flex items-center justify-center gap-2"
           >
-            {loading ? "Searching" : "Search"}
+            {loading ? (
+              <>
+                <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                Searching
+              </>
+            ) : (
+              "Search"
+            )}
           </button>
         </div>
 
@@ -136,7 +141,7 @@ export default function Home() {
                     : "bg-red-100 text-red-700"
                 }`}
               >
-                {user.status}
+                {isActive ? "ACTIVE" : "STOPPED"}
               </span>
             </div>
 
@@ -163,17 +168,22 @@ export default function Home() {
               disabled={isUpdating}
               className={`w-full py-4 rounded-xl font-bold text-white shadow-md transition-all 
               active:scale-[0.98] 
-              disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none ${
+              disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none flex items-center justify-center gap-2 ${
                 isActive
                   ? "bg-red-500 hover:bg-red-600"
                   : "bg-emerald-600 hover:bg-emerald-700"
               }`}
             >
-              {isUpdating
-                ? "Processing..."
-                : isActive
-                  ? "Stop Thali"
-                  : "Start Thali"}
+              {isUpdating ? (
+                <>
+                  <span className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                  Processing...
+                </>
+              ) : isActive ? (
+                "Stop Thali"
+              ) : (
+                "Start Thali"
+              )}
             </button>
           </div>
         ) : (
@@ -185,7 +195,6 @@ export default function Home() {
         )}
       </div>
 
-      {/* Footer with Portfolio */}
       <p className="mt-4 text-xs text-gray-400 text-center mt-auto">
         Developed by{" "}
         <a

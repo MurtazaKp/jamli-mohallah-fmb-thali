@@ -1,7 +1,6 @@
 import { getSheetsClient } from "@/app/lib/googleSheets";
 import { NextRequest, NextResponse } from "next/server";
 
-
 const getColumnLetter = (index: number) => {
   let letter = "";
   while (index >= 0) {
@@ -13,13 +12,13 @@ const getColumnLetter = (index: number) => {
 
 export async function POST(req: NextRequest) {
   try {
-   
     const now = new Date();
     const istTime = new Date(
       now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
     );
 
-    if (istTime.getHours() >= 20) {
+    // ⛔ Block after 8 PM
+    if (istTime.getHours() < 20) {
       return NextResponse.json(
         { error: "Thali update not allowed after 8 PM" },
         { status: 403 }
@@ -36,9 +35,11 @@ export async function POST(req: NextRequest) {
     }
 
     const sheets = await getSheetsClient();
-    const status = type === "start" ? "ACTIVE" : "STOPPED";
 
-    
+    // ✅ NEW LOGIC
+    const status = type === "start" ? "" : "STOPPED";
+
+    // 🔹 Get headers
     const headerRes = await sheets.spreadsheets.values.get({
       spreadsheetId: process.env.SHEET_ID!,
       range: `'${area}'!1:1`,
@@ -48,7 +49,6 @@ export async function POST(req: NextRequest) {
       h.toLowerCase().trim()
     );
 
-  
     const itsColIndex = headers.findIndex((col) => col === "its");
     const statusColIndex = headers.findIndex((col) =>
       col.includes("thali")
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ✅ 3. Get rows
+    // 🔹 Get rows
     const dataRes = await sheets.spreadsheets.values.get({
       spreadsheetId: process.env.SHEET_ID!,
       range: `'${area}'!A2:Z`,
@@ -69,7 +69,6 @@ export async function POST(req: NextRequest) {
 
     const rows = dataRes.data.values || [];
 
-    // ✅ 4. Find row using ITS
     const rowIndex = rows.findIndex(
       (row) => row && String(row[itsColIndex]) === String(its)
     );
@@ -81,11 +80,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ✅ 5. Convert column index → letter
     const columnLetter = getColumnLetter(statusColIndex);
     const actualRow = rowIndex + 2;
 
-    // ✅ 6. Update Thali_Status
+    // 🔹 Update cell
     await sheets.spreadsheets.values.update({
       spreadsheetId: process.env.SHEET_ID!,
       range: `'${area}'!${columnLetter}${actualRow}`,

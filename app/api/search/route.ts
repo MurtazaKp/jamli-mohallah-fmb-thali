@@ -1,88 +1,76 @@
 import { getSheetsClient } from "@/app/lib/googleSheets";
-import { UserProps } from "@/app/types";
 import { NextRequest, NextResponse } from "next/server";
-
-const SHEETS = [
-  "Taha",
-  "Zaini",
-  "Taheri",
-  "Mufaddal",
-  "Hakimi",
-  "Najmi",
-  "Ezzi",
-  "Saifee",
-  "Burhani",
-  "Transporter",
-];
 
 export async function POST(req: NextRequest) {
   try {
     const { its } = await req.json();
+
+    if (!its) {
+      return NextResponse.json(
+        { error: "ITS required" },
+        { status: 400 }
+      );
+    }
+
     const sheets = await getSheetsClient();
 
-    for (const sheetName of SHEETS) {
-      try {
-        const res = await sheets.spreadsheets.values.get({
-          spreadsheetId: process.env.SHEET_ID!,
-          range: `'${sheetName}'!A1:Z`,
-        });
+    // 🔥 AUTO FETCH SHEET NAMES (FIXED)
+    const meta = await sheets.spreadsheets.get({
+      spreadsheetId: process.env.SHEET_ID!,
+    });
 
-        const rows = res.data.values || [];
-        if (rows.length === 0) continue;
+    const sheetNames =
+      meta.data.sheets?.map((s: any) => s.properties.title) || [];
 
-        const headers = rows[0].map((h: string) =>
-          h.toLowerCase().trim()
-        );
+    for (const area of sheetNames) {
+      const res = await sheets.spreadsheets.values.get({
+        spreadsheetId: process.env.SHEET_ID!,
+        range: `${area}!A1:Z`, // ✅ FIXED (no quotes needed)
+      });
 
-        // ✅ exact mapping for your sheet
-        const itsColIndex = headers.findIndex((col) => col === "its");
-        const nameColIndex = headers.findIndex((col) => col === "name");
-        const phoneColIndex = headers.findIndex((col) =>
-          col.includes("mobile")
-        );
-        const statusColIndex = headers.findIndex((col) =>
-          col.includes("thali")
-        );
+      const rows = res.data.values || [];
+      if (!rows.length) continue;
 
-        if (
-          itsColIndex === -1 ||
-          nameColIndex === -1 ||
-          phoneColIndex === -1 ||
-          statusColIndex === -1
-        ) {
-          console.log("Skipping:", sheetName, headers);
-          continue;
-        }
+      const headers = rows[0].map((h: string) =>
+        h.toLowerCase().trim()
+      );
 
-        const rowIndex = rows.findIndex(
-          (row, index) =>
-            index !== 0 &&
-            row &&
-            String(row[itsColIndex]) === String(its)
-        );
+      const itsColIndex = headers.findIndex((h) => h === "its");
+      const nameColIndex = headers.findIndex((h) =>
+        h.includes("name")
+      );
+      const phoneColIndex = headers.findIndex((h) =>
+        h.includes("mobile")
+      );
+      const statusColIndex = headers.findIndex((h) =>
+        h.includes("thali")
+      );
 
-        if (rowIndex !== -1) {
-          const row = rows[rowIndex];
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
 
-          const user: UserProps = {
+        if (String(row[itsColIndex]) === String(its)) {
+          const rawStatus = row[statusColIndex];
+
+          // ✅ IMPORTANT LOGIC
+          const status = rawStatus === "STOPPED" ? "STOPPED" : "";
+
+          return NextResponse.json({
+            its,
             name: row[nameColIndex],
-            its: row[itsColIndex],
             phone: row[phoneColIndex],
-            status: row[statusColIndex] || "STOPPED",
-            area: sheetName,
-          };
-
-          return NextResponse.json(user);
+            area,
+            status,
+          });
         }
-      } catch (err) {
-        console.log(`Error in sheet: ${sheetName}`, err);
       }
     }
 
     return NextResponse.json(
-      { message: "User not found" },
+      { error: "User not found" },
       { status: 404 }
     );
+
   } catch (error) {
     console.error(error);
     return NextResponse.json(
