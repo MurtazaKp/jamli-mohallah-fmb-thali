@@ -26,7 +26,7 @@ export async function GET() {
       }).format(now)
     );
 
-    if (istHour < 10) {
+    if (istHour < 20) {
       console.log("Update skipped: Not after 8 PM IST yet.");
       return NextResponse.json({
         success: false,
