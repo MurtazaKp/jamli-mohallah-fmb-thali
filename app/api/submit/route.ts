@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     );
 
     // ⛔ Block after 8 PM
-    if (istTime.getHours() < 20) {
+    if (istTime.getHours() >= 20) {
       return NextResponse.json(
         { error: "Thali update not allowed after 8 PM" },
         { status: 403 }

@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
 
     const sheets = await getSheetsClient();
 
-    // 🔥 AUTO FETCH SHEET NAMES (FIXED)
+    // ✅ Get all sheet names
     const meta = await sheets.spreadsheets.get({
       spreadsheetId: process.env.SHEET_ID!,
     });
@@ -22,20 +22,32 @@ export async function POST(req: NextRequest) {
     const sheetNames =
       meta.data.sheets?.map((s: any) => s.properties.title) || [];
 
-    for (const area of sheetNames) {
-      const res = await sheets.spreadsheets.values.get({
-        spreadsheetId: process.env.SHEET_ID!,
-        range: `${area}!A1:Z`, // ✅ FIXED (no quotes needed)
-      });
+    // 🚀 Fetch all sheets in parallel
+    const sheetData = await Promise.all(
+      sheetNames.map(async (area) => {
+        const res = await sheets.spreadsheets.values.get({
+          spreadsheetId: process.env.SHEET_ID!,
+          range: `${area}!A1:Z`,
+        });
 
-      const rows = res.data.values || [];
+        return {
+          area,
+          rows: res.data.values || [],
+        };
+      })
+    );
+
+    // 🔍 Search in memory (FAST)
+    for (const sheet of sheetData) {
+      const { area, rows } = sheet;
+
       if (!rows.length) continue;
 
       const headers = rows[0].map((h: string) =>
         h.toLowerCase().trim()
       );
 
-      const itsColIndex = headers.findIndex((h) => h === "its");
+      const itsColIndex = headers.indexOf("its");
       const nameColIndex = headers.findIndex((h) =>
         h.includes("name")
       );
@@ -46,19 +58,21 @@ export async function POST(req: NextRequest) {
         h.includes("thali")
       );
 
+      // Skip if ITS column not found
+      if (itsColIndex === -1) continue;
+
       for (let i = 1; i < rows.length; i++) {
         const row = rows[i];
 
         if (String(row[itsColIndex]) === String(its)) {
           const rawStatus = row[statusColIndex];
-
-          // ✅ IMPORTANT LOGIC
-          const status = rawStatus === "STOPPED" ? "STOPPED" : "";
+          const status =
+            rawStatus === "STOPPED" ? "STOPPED" : "";
 
           return NextResponse.json({
             its,
-            name: row[nameColIndex],
-            phone: row[phoneColIndex],
+            name: row[nameColIndex] || "",
+            phone: row[phoneColIndex] || "",
             area,
             status,
           });
@@ -70,9 +84,9 @@ export async function POST(req: NextRequest) {
       { error: "User not found" },
       { status: 404 }
     );
-
   } catch (error) {
     console.error(error);
+
     return NextResponse.json(
       { error: "Something went wrong" },
       { status: 500 }
