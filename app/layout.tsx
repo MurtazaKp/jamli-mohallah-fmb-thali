@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Fmb Jamli Mohallah Pune ",
+  title: "FMB Jamli Mohallah Pune ",
   description: "created by Murtaza K",
 };
 
