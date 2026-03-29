@@ -30,14 +30,14 @@ export async function POST(req: NextRequest) {
 
     // 🚀 Fetch all sheets in parallel
     const sheetData = await Promise.all(
-      sheetNames.map(async (area) => {
+      sheetNames.map(async (sheetName) => {
         const res = await sheets.spreadsheets.values.get({
           spreadsheetId: process.env.SHEET_ID!,
-          range: `${area}!A1:Z`,
+          range: `${sheetName}!A1:Z`,
         });
 
         return {
-          area,
+          sheetName,
           rows: res.data.values || [],
         };
       })
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
 
     // 🔍 Search in memory
     for (const sheet of sheetData) {
-      const { area, rows } = sheet;
+      const { sheetName, rows } = sheet;
 
       if (!rows.length) continue;
 
@@ -62,6 +62,9 @@ export async function POST(req: NextRequest) {
       );
       const statusColIndex = headers.findIndex((h) =>
         h.includes("thali")
+      );
+      const addressColIndex = headers.findIndex((h) =>
+        h.includes("address")
       );
 
       if (itsColIndex === -1 || phoneColIndex === -1) continue;
@@ -84,7 +87,11 @@ export async function POST(req: NextRequest) {
             its,
             name: row[nameColIndex] || "",
             phone: row[phoneColIndex] || "",
-            area,
+            address:
+              addressColIndex !== -1
+                ? row[addressColIndex] || ""
+                : "",
+            area: sheetName, // ✅ IMPORTANT
             status,
           });
         }
