@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Fmb Jamli Mohallah Pune ",
-  description: "created by MK",
+  description: "created by Murtaza K",
 };
 
 export default function RootLayout({
