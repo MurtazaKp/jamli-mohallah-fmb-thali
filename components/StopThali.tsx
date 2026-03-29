@@ -143,7 +143,7 @@ export default function Home() {
             </button>
 
             {/* ✅ Notes Section */}
-            <div className="mt-4 text-sm text-gray-600 bg-yellow-50 border border-yellow-200 p-3 rounded-lg">
+            <div className="mt-4 text-[11px]  sm:text-sm text-gray-600 bg-yellow-50 border border-yellow-200 p-3 rounded-lg">
               <p>⚠️ Thaali start/stop should be done before 8 PM</p>
               <p>📞 For any issues, contact FMB Khidmatguzar</p>
             </div>
