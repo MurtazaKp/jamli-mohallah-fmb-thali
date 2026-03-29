@@ -3,14 +3,20 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
   try {
-    const { its } = await req.json();
+    const { its, phone } = await req.json();
 
-    if (!its) {
+    if (!its || !phone) {
       return NextResponse.json(
-        { error: "ITS required" },
+        { error: "ITS and Phone required" },
         { status: 400 }
       );
     }
+
+    // ✅ Normalize phone (last 10 digits only)
+    const normalizePhone = (num: string) =>
+      num.replace(/\D/g, "").slice(-10);
+
+    const inputPhone = normalizePhone(phone);
 
     const sheets = await getSheetsClient();
 
@@ -37,7 +43,7 @@ export async function POST(req: NextRequest) {
       })
     );
 
-    // 🔍 Search in memory (FAST)
+    // 🔍 Search in memory
     for (const sheet of sheetData) {
       const { area, rows } = sheet;
 
@@ -58,16 +64,21 @@ export async function POST(req: NextRequest) {
         h.includes("thali")
       );
 
-      // Skip if ITS column not found
-      if (itsColIndex === -1) continue;
+      if (itsColIndex === -1 || phoneColIndex === -1) continue;
 
       for (let i = 1; i < rows.length; i++) {
         const row = rows[i];
 
-        if (String(row[itsColIndex]) === String(its)) {
+        const sheetITS = String(row[itsColIndex] || "");
+        const sheetPhone = normalizePhone(
+          String(row[phoneColIndex] || "")
+        );
+
+        // ✅ MATCH ITS + PHONE
+        if (sheetITS === String(its) && sheetPhone === inputPhone) {
           const rawStatus = row[statusColIndex];
           const status =
-            rawStatus === "STOPPED" ? "STOPPED" : "";
+            rawStatus === "STOP" ? "STOP" : "";
 
           return NextResponse.json({
             its,
@@ -81,7 +92,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: "User not found" },
+      { error: "User not found or phone mismatch" },
       { status: 404 }
     );
   } catch (error) {

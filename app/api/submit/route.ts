@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     const sheets = await getSheetsClient();
 
     // ✅ NEW LOGIC
-    const status = type === "start" ? "" : "STOPPED";
+    const status = type === "start" ? "" : "STOP";
 
     // 🔹 Get headers
     const headerRes = await sheets.spreadsheets.values.get({
