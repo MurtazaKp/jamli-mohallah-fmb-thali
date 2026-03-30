@@ -12,11 +12,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ✅ Normalize phone (last 10 digits only)
+    // ✅ Normalize phone (last 10 digits)
     const normalizePhone = (num: string) =>
       num.replace(/\D/g, "").slice(-10);
 
     const inputPhone = normalizePhone(phone);
+    const inputITS = String(its).trim();
 
     const sheets = await getSheetsClient();
 
@@ -28,9 +29,15 @@ export async function POST(req: NextRequest) {
     const sheetNames =
       meta.data.sheets?.map((s: any) => s.properties.title) || [];
 
+    // ✅ Filter only valid data sheets (IMPORTANT)
+    const validSheets = sheetNames.filter(
+      (name: string) =>
+        !["Totals", "Settings", "March"].includes(name)
+    );
+
     // 🚀 Fetch all sheets in parallel
     const sheetData = await Promise.all(
-      sheetNames.map(async (sheetName) => {
+      validSheets.map(async (sheetName) => {
         const res = await sheets.spreadsheets.values.get({
           spreadsheetId: process.env.SHEET_ID!,
           range: `${sheetName}!A1:Z`,
@@ -47,13 +54,17 @@ export async function POST(req: NextRequest) {
     for (const sheet of sheetData) {
       const { sheetName, rows } = sheet;
 
-      if (!rows.length) continue;
+      if (rows.length < 2) continue; // must have header + data
 
-      const headers = rows[0].map((h: string) =>
+      // ✅ Header is on 2nd row (index 1)
+      const headers = rows[1].map((h: string) =>
         h.toLowerCase().trim()
       );
 
-      const itsColIndex = headers.indexOf("its");
+      // 🔍 Flexible column detection
+      const itsColIndex = headers.findIndex((h) =>
+        h.includes("its")
+      );
       const nameColIndex = headers.findIndex((h) =>
         h.includes("name")
       );
@@ -61,49 +72,58 @@ export async function POST(req: NextRequest) {
         h.includes("mobile")
       );
       const statusColIndex = headers.findIndex((h) =>
-        h.includes("thali")
+        h.includes("status")
       );
       const addressColIndex = headers.findIndex((h) =>
         h.includes("address")
       );
 
-      if (itsColIndex === -1 || phoneColIndex === -1) continue;
+      if (itsColIndex === -1 || phoneColIndex === -1) {
+        // console.log("Skipping sheet:", sheetName);
+        continue;
+      }
 
-      for (let i = 1; i < rows.length; i++) {
-        const row = rows[i];
+      // 🔁 Loop from row index 2 (skip title + header)
+      for (let i = 2; i < rows.length; i++) {
+        const row = rows[i] || [];
 
-        const sheetITS = String(row[itsColIndex] || "");
+        const sheetITS = String(row[itsColIndex] || "").trim();
         const sheetPhone = normalizePhone(
           String(row[phoneColIndex] || "")
         );
 
         // ✅ MATCH ITS + PHONE
-        if (sheetITS === String(its) && sheetPhone === inputPhone) {
-          const rawStatus = row[statusColIndex];
+        if (sheetITS === inputITS && sheetPhone === inputPhone) {
+          const rawStatus = row[statusColIndex] || "";
           const status =
-            rawStatus === "STOP" ? "STOP" : "";
+            String(rawStatus).toUpperCase().trim() === "STOP"
+              ? "STOP"
+              : "";
 
           return NextResponse.json({
-            its,
-            name: row[nameColIndex] || "",
-            phone: row[phoneColIndex] || "",
+            its: inputITS,
+            name:
+              nameColIndex !== -1 ? row[nameColIndex] || "" : "",
+            phone:
+              phoneColIndex !== -1 ? row[phoneColIndex] || "" : "",
             address:
               addressColIndex !== -1
                 ? row[addressColIndex] || ""
                 : "",
-            area: sheetName, // ✅ IMPORTANT
+            area: sheetName,
             status,
           });
         }
       }
     }
 
+    // ❌ Not found
     return NextResponse.json(
       { error: "User not found or phone mismatch" },
       { status: 404 }
     );
   } catch (error) {
-    console.error(error);
+    console.error("API ERROR:", error);
 
     return NextResponse.json(
       { error: "Something went wrong" },
