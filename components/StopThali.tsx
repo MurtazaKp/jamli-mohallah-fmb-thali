@@ -94,15 +94,27 @@ export default function Home() {
         <div className="flex justify-center gap-2">
           <img className="w-28 h-28" src="/jamali.png" alt="" />
         </div>
+
         <h1 className="text-xl sm:text-2xl font-bold text-center text-emerald-800 mb-6">
           FMB Thaali System
         </h1>
 
-        {/* Search Section */}
-
-        {/* User Card */}
+        {/* USER VIEW */}
         {user ? (
           <div>
+            {/* 🔙 Back Button */}
+            <button
+              onClick={() => {
+                setUser(null);
+                setIts("");
+                setPhone("");
+              }}
+              disabled={isUpdating}
+              className="mb-4 text-sm text-emerald-700 hover:underline"
+            >
+              ← Back to Search
+            </button>
+
             <div className="flex justify-between mb-6 bg-gray-50 p-3 rounded-lg">
               <span className="text-sm text-gray-500">Current Status</span>
               <span
@@ -142,13 +154,14 @@ export default function Home() {
                   : "Start Thali"}
             </button>
 
-            {/* ✅ Notes Section */}
-            <div className="mt-4 text-[11px]  sm:text-sm text-gray-600 bg-yellow-50 border border-yellow-200 p-3 rounded-lg">
-              <p>⚠️ Thaali start/stop should be done before 8 PM</p>
+            {/* Notes */}
+            <div className="mt-4 text-[11px] sm:text-sm text-gray-600 bg-yellow-50 border border-yellow-200 p-3 rounded-lg">
+              <p>⚠️ Thaali start/stop allowed only between 8 AM and 6 PM</p>
               <p>📞 For any issues, contact FMB Khidmatguzar</p>
             </div>
           </div>
         ) : (
+          /* SEARCH VIEW */
           <div className="flex flex-col gap-3 mb-8">
             <input
               type="number"
@@ -185,9 +198,9 @@ export default function Home() {
           </div>
         )}
       </div>
-      <div className="mt-4 w-full  relative text-xs text-gray-400 mt-auto">
-        {/* Center Text */}
-        <div className="text-center">FMB Jamali Mohallah Pune</div>
+
+      <div className="mt-4 w-full text-xs text-gray-400 mt-auto text-center">
+        FMB Jamali Mohallah Pune
       </div>
     </div>
   );
