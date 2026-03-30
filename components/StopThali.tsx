@@ -70,7 +70,7 @@ export default function Home() {
         }
 
         toast.success(
-          `Thali successfully ${type === "start" ? "started" : "STOP"}!`,
+          `Thali successfully ${type === "start" ? "Started" : "Stopped"}!`,
         );
       } else {
         toast.error(data.error || "Something went wrong");
@@ -110,7 +110,7 @@ export default function Home() {
                 setPhone("");
               }}
               disabled={isUpdating}
-              className="mb-4 text-sm text-emerald-700 hover:underline"
+              className="mb-4 text-sm text-emerald-700 hover:underline cursor-pointer"
             >
               ← Back to Search
             </button>
@@ -143,7 +143,7 @@ export default function Home() {
             <button
               onClick={handleUpdate}
               disabled={isUpdating}
-              className={`w-full py-3 rounded-xl text-white ${
+              className={`w-full py-3 rounded-xl text-white cursor-pointer  ${
                 isActive ? "bg-red-500" : "bg-green-600"
               }`}
             >
@@ -166,7 +166,7 @@ export default function Home() {
             <input
               type="number"
               placeholder="Enter ITS Number"
-              className="px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-black"
+              className={`px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-black disabled:cursor-not-allowed `}
               value={its}
               onChange={(e) => setIts(e.target.value)}
               disabled={loading || isUpdating}
@@ -184,7 +184,7 @@ export default function Home() {
             <button
               onClick={handleSearch}
               disabled={loading || isUpdating || !its || !phone}
-              className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-semibold disabled:opacity-50 flex justify-center items-center gap-2"
+              className={`bg-emerald-600 text-white px-6 py-3 rounded-xl cursor-pointer font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2  `}
             >
               {loading ? (
                 <>
