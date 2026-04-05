@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ✅ Normalize phone (last 10 digits)
+    // ✅ Normalize phone
     const normalizePhone = (num: string) =>
       num.replace(/\D/g, "").slice(-10);
 
@@ -29,13 +29,13 @@ export async function POST(req: NextRequest) {
     const sheetNames =
       meta.data.sheets?.map((s: any) => s.properties.title) || [];
 
-    // ✅ Filter only valid data sheets (IMPORTANT)
+    // ✅ Filter sheets
     const validSheets = sheetNames.filter(
       (name: string) =>
         !["Totals", "Settings", "March"].includes(name)
     );
 
-    // 🚀 Fetch all sheets in parallel
+    // 🚀 Fetch all sheets
     const sheetData = await Promise.all(
       validSheets.map(async (sheetName) => {
         const res = await sheets.spreadsheets.values.get({
@@ -50,18 +50,17 @@ export async function POST(req: NextRequest) {
       })
     );
 
-    // 🔍 Search in memory
+    // 🔍 Search
     for (const sheet of sheetData) {
       const { sheetName, rows } = sheet;
 
-      if (rows.length < 2) continue; // must have header + data
+      if (rows.length < 2) continue;
 
-      // ✅ Header is on 2nd row (index 1)
+      // ✅ Normalize headers
       const headers = rows[1].map((h: string) =>
         h.toLowerCase().trim()
       );
 
-      // 🔍 Flexible column detection
       const itsColIndex = headers.findIndex((h) =>
         h.includes("its")
       );
@@ -69,7 +68,7 @@ export async function POST(req: NextRequest) {
         h.includes("name")
       );
       const phoneColIndex = headers.findIndex((h) =>
-        h.includes("mobile")
+        h.includes("mobile") 
       );
       const statusColIndex = headers.findIndex((h) =>
         h.includes("status")
@@ -77,13 +76,15 @@ export async function POST(req: NextRequest) {
       const addressColIndex = headers.findIndex((h) =>
         h.includes("address")
       );
+      const thaliNoColIndex = headers.findIndex((h) =>
+        h.includes("thaali no") 
+      );
 
       if (itsColIndex === -1 || phoneColIndex === -1) {
-        // console.log("Skipping sheet:", sheetName);
         continue;
       }
 
-      // 🔁 Loop from row index 2 (skip title + header)
+      // 🔁 Loop rows
       for (let i = 2; i < rows.length; i++) {
         const row = rows[i] || [];
 
@@ -92,7 +93,7 @@ export async function POST(req: NextRequest) {
           String(row[phoneColIndex] || "")
         );
 
-        // ✅ MATCH ITS + PHONE
+        // ✅ MATCH
         if (sheetITS === inputITS && sheetPhone === inputPhone) {
           const rawStatus = row[statusColIndex] || "";
           const status =
@@ -111,6 +112,10 @@ export async function POST(req: NextRequest) {
                 ? row[addressColIndex] || ""
                 : "",
             area: sheetName,
+            thaali_no:
+              thaliNoColIndex !== -1
+                ? row[thaliNoColIndex] || ""
+                : "",
             status,
           });
         }

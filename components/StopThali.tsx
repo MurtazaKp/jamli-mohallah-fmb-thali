@@ -130,6 +130,9 @@ export default function Home() {
 
             <div className="space-y-4 mb-6 text-sm">
               <p>
+                <b>Thaali No:</b> {user.thaali_no}
+              </p>
+              <p>
                 <b>Name:</b> {user.name}
               </p>
               <p>

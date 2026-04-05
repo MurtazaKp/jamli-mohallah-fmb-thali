@@ -5,5 +5,6 @@ export type UserProps = {
   status: string;
   area: string;
   address:string
+  thaali_no:string
 
 };
