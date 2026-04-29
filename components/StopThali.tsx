@@ -159,7 +159,7 @@ export default function Home() {
 
             {/* Notes */}
             <div className="mt-4 text-[11px] sm:text-sm text-gray-600 bg-yellow-50 border border-yellow-200 p-3 rounded-lg">
-              <p>⚠️ Thaali start/stop allowed only before 8pm</p>
+              <p>⚠️ Thali start/stop allowed only between 10 AM and 8 PM</p>
               <p>📞 For any issues, contact FMB Khidmatguzar</p>
             </div>
           </div>

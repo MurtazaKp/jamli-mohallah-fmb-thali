@@ -19,10 +19,11 @@ export async function POST(req: NextRequest) {
       now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
     );
 
-    // ⛔ Block after 8 PM
-    if (istTime.getHours() >= 20) {
+    // ⛔ Block before 10 AM and after 8 PM
+    const hours = istTime.getHours();
+    if (hours < 10 || hours >= 20) {
       return NextResponse.json(
-        { error: "Thali update not allowed after 8 PM" },
+        { error: "Thali update allowed only between 10 AM and 8 PM" },
         { status: 403 }
       );
     }
@@ -57,6 +58,9 @@ export async function POST(req: NextRequest) {
     );
     const statusColIndex = headers.findIndex((col) =>
       col.includes("status")
+    );
+    const updatedAtColIndex = headers.findIndex((col) =>
+      col.includes("lastupdatedat")
     );
 
     if (itsColIndex === -1 || statusColIndex === -1) {
@@ -96,7 +100,16 @@ export async function POST(req: NextRequest) {
     // 🔥 IMPORTANT: actual row = index + 3 (since data starts at row 3)
     const actualRow = rowIndex + 3;
 
-    // 🔹 STEP 4: Update cell
+    // 🔹 STEP 4: Update cells
+    const timestamp = istTime.toLocaleString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      day: "2-digit",
+      month: "2-digit",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+
     await sheets.spreadsheets.values.update({
       spreadsheetId: process.env.SHEET_ID!,
       range: `'${area}'!${columnLetter}${actualRow}`,
@@ -105,6 +118,18 @@ export async function POST(req: NextRequest) {
         values: [[status]],
       },
     });
+
+    if (updatedAtColIndex !== -1) {
+      const updatedAtLetter = getColumnLetter(updatedAtColIndex);
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: process.env.SHEET_ID!,
+        range: `'${area}'!${updatedAtLetter}${actualRow}`,
+        valueInputOption: "USER_ENTERED",
+        requestBody: {
+          values: [[timestamp]],
+        },
+      });
+    }
 
     return NextResponse.json({
       message: "Updated successfully",
